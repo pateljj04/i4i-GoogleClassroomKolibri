@@ -30,28 +30,37 @@ from urllib.parse import urljoin
 """
 
 def videoAssignment(material):
-    video_node = VideoNode(
-        source_id= material["youtubeVideo"]["id"],  # usually set source_id to youtube_id
+    return VideoNode(
+        source_id=material["youtubeVideo"][
+            "id"
+        ],  # usually set source_id to youtube_id
         title=material["youtubeVideo"]["title"],
-        license=get_license(licenses.CC_BY, copyright_holder='Copyright holder name'),
+        license=get_license(
+            licenses.CC_BY, copyright_holder='Copyright holder name'
+        ),
         language=getlang('en').id,
         derive_thumbnail=True,  # video-specicig flag
         thumbnail=None,
         files=[
-                YouTubeVideoFile(youtube_id=material["youtubeVideo"]["id"], high_resolution=False, language='en'),
-                YouTubeSubtitleFile(youtube_id=material["youtubeVideo"]["id"], language='en')
-            ]
+            YouTubeVideoFile(
+                youtube_id=material["youtubeVideo"]["id"],
+                high_resolution=False,
+                language='en',
+            ),
+            YouTubeSubtitleFile(
+                youtube_id=material["youtubeVideo"]["id"], language='en'
+            ),
+        ],
     )
-    return video_node
 
 
 def linkAssignment(material):
-    url = material["link"]["url"]                        
+    url = material["link"]["url"]
     session = requests.Session()
-    session.headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36"                            
-    html = session.get(url).content                         
+    session.headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36"
+    html = session.get(url).content
     soup = bs(html, "html.parser")
-        
+
     script_files = []
     css_files = []
 
@@ -65,34 +74,35 @@ def linkAssignment(material):
         if css.attrs.get("href"):
             css_url = urljoin(url, css.attrs.get("href"))
             css_files.append(css_url)
-                                            
+
     with HTMLWriter('./myzipper.zip') as zipper:                                    
         with open("index.html", "w", encoding = "utf-8") as f:
             index_content = soup.prettify()
             zipper.write_index_contents(index_content)
-                                            
+
         with open("javascript_files.js") as f:
             for js_file in script_files:
                 script_path = zipper.write_url(js_file, "scripts.js", directory = "src")
                 script = "<script src='{}' type='text/javascript'></script>".format(script_path)
-                                                
+
         with open("css_files.css", "w") as f:
             for css_file in css_files:
                 print(css_file, file=f)
                 css_path = zipper.write_url(css_file, "style.css", directory = "styles")
                 extra_head = "<link href='{}' rel='stylesheet'></link>".format(css_path)
-                                                                 
+
     link_file = HTMLZipFile(path = './myzipper.zip')
-    link_node = HTML5AppNode(
-        source_id = material["link"]["url"],
-        title = material["link"]["title"],
-        license = get_license(licenses.CC_BY, copyright_holder='Copyright holder name'),
-        language = getlang('en').id,
-        derive_thumbnail = False,
-        thumbnail = None,
-        files=[link_file]      
+    return HTML5AppNode(
+        source_id=material["link"]["url"],
+        title=material["link"]["title"],
+        license=get_license(
+            licenses.CC_BY, copyright_holder='Copyright holder name'
+        ),
+        language=getlang('en').id,
+        derive_thumbnail=False,
+        thumbnail=None,
+        files=[link_file],
     )
-    return link_node
 
 def formAssignment(material):
     print("form")

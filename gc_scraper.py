@@ -76,7 +76,7 @@ def doc_convert(file_id, file_name, service):
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, converted)
     done = False
-    while done is False:
+    while not done:
         status, done = downloader.next_chunk()
 
     with open("documents/" + file_name + ".pdf",'wb') as out:
@@ -88,7 +88,7 @@ def doc_googlfy(ext, file_id, service):
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
-    while done is False:
+    while not done:
         status, done = downloader.next_chunk()
 
     with open("documents/tempdoc." + ext,'wb') as out:
@@ -116,9 +116,8 @@ class CompleteCourse:
 def encode_CompleteCourse(x):
     if isinstance(x, CompleteCourse):
         return { "Course" : x.course, "Topics" : x.courseTopics, "Assignments" : x.courseAssignments}
-    else:
-        type_name = z.__class__.__name__
-        raise TypeError(f"Object of type '{type_name}' is not JSON serializable")
+    type_name = z.__class__.__name__
+    raise TypeError(f"Object of type '{type_name}' is not JSON serializable")
 
 def main():
     creds = None
@@ -148,15 +147,10 @@ def main():
     results = service.courses().list(pageSize=10).execute()
     courses = results.get('courses', [])
 
-    if not courses:
-        print('No courses found.')
-    else:
+    if courses:
         print('Courses:')
-        i = 1
-        for course in courses:
+        for i, course in enumerate(courses, start=1):
             print(str(i)+' '+course['name'])
-            i+=1
-
         print("Select a course:")
         inputcoursenum= int(input()) -1
         selectedCourse = courses[inputcoursenum]
@@ -175,14 +169,12 @@ def main():
                 for topic in topicslist:
                     #Store topic data
                     thisCourse.courseTopics[topic['name']] = topic
-                
+
         #Retrieve list of coursework
         results = service.courses().courseWork().list(courseId=selectedCourseId).execute()
         courseworks = results.get('courseWork', [])
 
-        if not courseworks:
-            print('No coursework found.')
-        else:     
+        if courseworks:     
             for courseWork in courseworks:
                 #Store coursework data
                 thisCourse.courseAssignments[courseWork["title"]]=courseWork
@@ -207,13 +199,13 @@ def main():
                                 googId=doc_googlfy("pptx", file_id, service2)
                                 doc_convert(googId,file_name, service2)
                                 service2.files().delete(fileId=googId).execute()
-                                    
+
                             #EXCEL DOCUMENT
                             elif file["mimeType"] in exMime:
                                 googId=doc_googlfy("xlsx", file_id, service2)
                                 doc_convert(googId,file_name, service2)
                                 service2.files().delete(fileId=googId).execute()
-                                                                   
+
                             #IMAGE
                             elif file["mimeType"] in imgMime:
                                 googId=doc_googlfy("png", file_id, service2)
@@ -226,8 +218,12 @@ def main():
 
                             else:
                                 print("File type not recognized.")
-                                    
-                     
+
+
+        else:
+            print('No coursework found.')
+    else:
+        print('No courses found.')
     #Dump all course information to JSON file gc_data.json
     with open("gc_data.json", "w") as gc_data:
         json.dump(thisCourse,gc_data,indent=1,default=encode_CompleteCourse)
